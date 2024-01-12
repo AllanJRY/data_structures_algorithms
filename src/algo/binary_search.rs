@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::{ops::Deref, usize};
 
 /// The binary search offers an effecient way to find a value in an ORDERED
