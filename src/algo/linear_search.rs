@@ -1,3 +1,7 @@
+#![allow(dead_code)]
+
+// TODO: add documentation
+
 #[allow(clippy::manual_find)]
 pub fn linear_search<T: PartialEq>(haystack: &[T], needle: T) -> Option<&T> {
     for val in haystack {
