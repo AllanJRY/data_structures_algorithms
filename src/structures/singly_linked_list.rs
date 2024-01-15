@@ -6,6 +6,7 @@ pub struct SinglyLinkedList<T> {
     head: Option<Box<Node<T>>>,
 }
 
+// TODO: implement IntoIter, Iter, IterMut
 impl<T> SinglyLinkedList<T> {
     pub fn empty() -> Self {
         Self { head: None }
@@ -30,6 +31,10 @@ impl<T> SinglyLinkedList<T> {
 
     pub fn peek(&self) -> Option<&T> {
         self.head.as_ref().map(|n| &n.val)
+    }
+
+    pub fn peek_mut(&mut self) -> Option<&mut T> {
+        self.head.as_mut().map(|n| &mut n.val)
     }
 }
 
@@ -78,8 +83,7 @@ mod test {
         let mut list: SinglyLinkedList<i32> = SinglyLinkedList::empty();
         list.push(3);
         assert!(list.head.is_some());
-        let val = list.pop();
-        assert_eq!(Some(3), val);
+        assert_eq!(Some(3), list.pop());
         assert!(list.head.is_none());
     }
 
@@ -89,12 +93,9 @@ mod test {
         list.push(3);
         list.push(7);
         list.push(2);
-        let val = list.pop();
-        assert_eq!(Some(2), val);
-        let val = list.pop();
-        assert_eq!(Some(7), val);
-        let val = list.pop();
-        assert_eq!(Some(3), val);
+        assert_eq!(Some(2), list.pop());
+        assert_eq!(Some(7), list.pop());
+        assert_eq!(Some(3), list.pop());
         assert!(list.head.is_none());
     }
 
@@ -103,5 +104,15 @@ mod test {
         let mut list: SinglyLinkedList<i32> = SinglyLinkedList::empty();
         list.push(3);
         assert_eq!(Some(&3), list.peek());
+    }
+
+    #[test]
+    fn linked_list_peek_mut() {
+        let mut list: SinglyLinkedList<i32> = SinglyLinkedList::empty();
+        list.push(3);
+        if let Some(val) = list.peek_mut() {
+            *val = 7;
+        }
+        assert_eq!(Some(&7), list.peek());
     }
 }
