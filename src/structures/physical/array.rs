@@ -88,6 +88,8 @@ impl<T> Array<T> {
             // safely without taking the risk to overwritte and miss values.
             self.ptr.as_ptr().add(index).write(item);
         }
+
+        self.len += 1;
     }
 
     pub fn remove(&mut self, index: usize) -> T {
@@ -210,6 +212,8 @@ impl<T> Drop for Array<T> {
 
 #[cfg(test)]
 mod test {
+    use std::ops::Index;
+
     use super::*;
 
     #[test]
@@ -266,6 +270,56 @@ mod test {
         assert_eq!(Some(3), arr.pop());
         assert_eq!(Some(1), arr.pop());
         assert_eq!(None, arr.pop());
+    }
+
+    #[test]
+    fn array_insert() {
+        let mut arr = Array::<i32>::new();
+        arr.push(1);
+        arr.push(3);
+        arr.push(7);
+        arr.insert(1, 9);
+        assert_eq!(4, arr.cap);
+        assert_eq!(4, arr.len);
+        assert_eq!(9, arr[1]);
+        assert_eq!(3, arr[2]);
+    }
+
+    #[test]
+    fn array_insert_tail() {
+        let mut arr = Array::<i32>::new();
+        arr.push(1);
+        arr.push(3);
+        arr.push(5);
+        arr.push(7);
+        arr.insert(arr.len, 9);
+        assert_eq!(8, arr.cap);
+        assert_eq!(5, arr.len);
+        assert_eq!(9, arr[arr.len - 1]);
+    }
+
+    #[test]
+    fn array_remove() {
+        let mut arr = Array::<i32>::new();
+        arr.push(1);
+        arr.push(3);
+        arr.push(7);
+        assert_eq!(3, arr.remove(1));
+        assert_eq!(4, arr.cap);
+        assert_eq!(2, arr.len);
+        assert_eq!(7, arr[1]);
+    }
+
+    #[test]
+    fn array_remove_tail() {
+        let mut arr = Array::<i32>::new();
+        arr.push(1);
+        arr.push(3);
+        arr.push(7);
+        assert_eq!(7, arr.remove(arr.len - 1));
+        assert_eq!(4, arr.cap);
+        assert_eq!(2, arr.len);
+        assert_eq!(3, arr[arr.len - 1]);
     }
 
     #[test]
