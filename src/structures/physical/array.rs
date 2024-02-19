@@ -62,7 +62,58 @@ impl<T> Array<T> {
         }
     }
 
-    // TODO: insert + remove + IntoIter + Drain + Handling ZST
+    pub fn insert(&mut self, index: usize, item: T) {
+        // We need to check if the index is in the bounds, to avoid writing at
+        // an address that we don't owned. Note "<=" is used because
+        // it's totally ok to add just after the last item, this would behave
+        // like a push.
+        assert!(index <= self.len, "index out of bounds");
+        // We check if we have enough space to add the new item. Otherwise we
+        // grow.
+        if self.len() == self.cap {
+            self.grow();
+        }
+
+        unsafe {
+            // Here we use the base pointer to point to the address were we
+            // want to insert the item, and we shift the current element at
+            // that position and all the next by one slot. that way we can
+            // write the new item.
+            std::ptr::copy(
+                self.ptr.as_ptr().add(index),
+                self.ptr.as_ptr().add(index + 1),
+                self.len - index,
+            );
+            // existing values have been shifted, we can now wrtie the item
+            // safely without taking the risk to overwritte and miss values.
+            self.ptr.as_ptr().add(index).write(item);
+        }
+    }
+
+    pub fn remove(&mut self, index: usize) -> T {
+        // We need to check if the index is in the bounds, to avoid writing at
+        // an address that we don't owned.
+        assert!(index <= self.len, "index out of bounds");
+        unsafe {
+            // We reduce the len before the shifting, this way we avoid a
+            // duplicate minus 1 operation on the len.
+            self.len -= 1;
+            // We need to read the item now, because the shift will overwrite
+            // the value.
+            let removed_item = self.ptr.as_ptr().add(index).read();
+            // Here we use the base pointer to point to the address which came
+            // just after the address at which we want to remove the value,
+            // and we shift back by one address all the value which follows
+            std::ptr::copy(
+                self.ptr.as_ptr().add(index + 1),
+                self.ptr.as_ptr().add(index),
+                self.len - index,
+            );
+            removed_item
+        }
+    }
+
+    // TODO: IntoIter + Drain + Handling ZST
 
     fn grow(&mut self) {
         // Zero sized type are not yet supported, the main challenge here is
