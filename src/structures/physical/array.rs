@@ -7,6 +7,7 @@ use std::{
     ops::{Deref, DerefMut},
     ptr::NonNull,
 };
+use std::cmp::Ordering;
 
 pub struct Array<T> {
     ptr: NonNull<T>,
@@ -16,6 +17,10 @@ pub struct Array<T> {
 
 impl<T> Array<T> {
     pub fn new() -> Self {
+        // Zero sized type are not yet supported, the main challenge here is
+        // to handle the fact that ZST take no space in memory so the pointer
+        // will always return the same address, the first one.
+        assert_ne!(mem::size_of::<T>(), 0, "Zero sized type not supported");
         Self {
             ptr: NonNull::dangling(),
             cap: 0,
@@ -94,8 +99,9 @@ impl<T> Array<T> {
 
     pub fn remove(&mut self, index: usize) -> T {
         // We need to check if the index is in the bounds, to avoid writing at
-        // an address that we don't owned.
-        assert!(index <= self.len, "index out of bounds");
+        // an address that we don't owned. Note that here, it is not valid to 
+        // remove after everything compared to insert.
+        assert!(index < self.len, "index out of bounds");
         unsafe {
             // We reduce the len before the shifting, this way we avoid a
             // duplicate minus 1 operation on the len.
@@ -118,11 +124,6 @@ impl<T> Array<T> {
     // TODO: IntoIter + Drain + Handling ZST
 
     fn grow(&mut self) {
-        // Zero sized type are not yet supported, the main challenge here is
-        // to handle the fact that ZST take no space in memory so the pointer
-        // will always return the same address, the first one.
-        assert_ne!(mem::size_of::<T>(), 0, "Zero sized type not supported");
-
         let (new_cap, new_layout) = if self.cap == 0 {
             (1, alloc::Layout::array::<T>(1).unwrap())
         } else {
@@ -133,7 +134,7 @@ impl<T> Array<T> {
             // capacity. If the new size exceed isize::MAX, the array function
             // will fail, so we panic because the program reach it's space
             // limit.
-            match alloc::Layout::array::<T>(2 * self.cap) {
+            match alloc::Layout::array::<T>(new_cap) {
                 Ok(layout) => (new_cap, layout),
                 Err(_) => panic!("Not enough space to allocate more for the array."),
             }
@@ -151,7 +152,13 @@ impl<T> Array<T> {
             // succeed to allocate this layout.
             let old_layout = alloc::Layout::array::<T>(self.cap).unwrap();
             let old_ptr = self.ptr.as_ptr() as *mut u8;
-            unsafe { alloc::realloc(old_ptr, old_layout, new_cap) as *mut T }
+            // IMPORTANTE NOTE: It is important to give the new layout
+            // size to the size arg, because a bug may occure when the program
+            // sometimes access an invalid memory address (on not owned) when
+            // self.cap is used. The layout size is calculated with size and 
+            // alignement took into account. Note to me: when allocating manually
+            // always use layout infos.
+            unsafe { alloc::realloc(old_ptr, old_layout, new_layout.size()) as *mut T }
         };
 
         self.cap = new_cap;
@@ -164,6 +171,48 @@ impl<T> Array<T> {
                 alloc::handle_alloc_error(new_layout)
             }
         }
+    }
+}
+
+impl<T: Eq> Array<T> {
+    // add to doc :
+    // We can improve linear search in 2 ways : 
+    // The first would be to use transposition, every time an element is 
+    // searched and found, we move this element closer to the first index,
+    // this way frequently searched element will be faster and faster, 
+    // The second one is **move to fron/headt**, the idea is the same as before
+    // but we always swap with the element at index 0.
+    // For both solutions, we try to move the element frequently searched 
+    // element to the first index, to get a constant time look up.
+    pub fn linear_search(&self, other: &T) -> Option<usize> {
+        for (idx, v) in self.iter().enumerate() {
+            if v == other {
+                return Some(idx);
+            }
+        }
+        None
+    }
+}
+
+impl<T: Eq + Ord> Array<T> {
+    pub fn binary_search(&self, other: &T) -> Option<usize> {
+        if self.len == 0 {
+            return None;
+        }
+
+        let mut low_idx = 0usize;
+        let mut high_idx = self.len - 1;
+
+        while low_idx <= high_idx {
+            let mid_idx = (low_idx + high_idx) / 2;
+            dbg!(low_idx, mid_idx, high_idx);
+            match other.cmp(&self[mid_idx]) {
+                Ordering::Equal => return Some(mid_idx),
+                Ordering::Less => high_idx = mid_idx - 1,
+                Ordering::Greater => low_idx = mid_idx + 1,
+            }
+        }
+        None
     }
 }
 
@@ -267,7 +316,11 @@ mod test {
         assert_eq!(4, arr.cap);
         assert_eq!(3, arr.len);
         assert_eq!(Some(7), arr.pop());
+        assert_eq!(4, arr.cap);
+        assert_eq!(2, arr.len);
         assert_eq!(Some(3), arr.pop());
+        assert_eq!(4, arr.cap);
+        assert_eq!(1, arr.len);
         assert_eq!(Some(1), arr.pop());
         assert_eq!(None, arr.pop());
     }
@@ -329,5 +382,32 @@ mod test {
         assert_eq!(1, arr.cap);
         assert_eq!(1, arr.len);
         assert_eq!(1, arr[0]);
+    }
+
+    #[test]
+    fn array_linear_search() {
+        let mut arr = Array::<i32>::new();
+        arr.push(1);
+        arr.push(3);
+        arr.push(5);
+        arr.push(7);
+        assert_eq!(Some(3), arr.linear_search(&7));
+        assert_eq!(None, arr.linear_search(&9));
+    }
+
+    #[test]
+    fn array_binary_search() {
+        let mut arr = Array::<i32>::new();
+        arr.push(1);
+        arr.push(3);
+        arr.push(5);
+        arr.push(7);
+        arr.push(9);
+        arr.push(11);
+        arr.push(12);
+        assert_eq!(Some(3), arr.binary_search(&7));
+        assert_eq!(Some(1), arr.binary_search(&3));
+        assert_eq!(Some(6), arr.binary_search(&12));
+        assert_eq!(None, arr.binary_search(&13))
     }
 }
