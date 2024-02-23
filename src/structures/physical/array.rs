@@ -5,7 +5,7 @@ use std::{
     io::Write,
     isize, mem,
     ops::{Deref, DerefMut},
-    ptr::NonNull,
+    ptr::NonNull, process::id,
 };
 use std::cmp::Ordering;
 
@@ -26,6 +26,32 @@ impl<T> Array<T> {
             cap: 0,
             len: 0,
         }
+    }
+
+    pub fn get(&self, idx: usize) -> &T {
+        assert!(idx < self.len, "index out of bound");
+        unsafe {
+            // SAFETY: We are sure that the pointer is not null or it is 
+            // pointing to an invalid address, because we use an assertion
+            // on the idx value at the beginning of the fn.
+            return &self.ptr.as_ptr().add(idx).as_ref().unwrap();   
+        }
+        // To avoid unsafe, and because we impl Deref en it returns a slice of
+        // the array, we can use the brackets syntax, Slices implements Index.
+        // return &self[idx];
+    }
+
+    pub fn set(&mut self, idx: usize, item: T) {
+        assert!(idx < self.len, "index out of bound");
+        unsafe {
+            // SAFETY: We are sure that the pointer is not null or it is 
+            // pointing to an invalid address, because we use an assertion
+            // on the idx value at the beginning of the fn.
+            self.ptr.as_ptr().add(idx).write(item);   
+        }
+        // To avoid unsafe, and because we impl Deref en it returns a slice of
+        // the array, we can use the brackets syntax, Slices implements Index.
+        // self[idx] = item;
     }
 
     pub fn push(&mut self, item: T) {
@@ -121,7 +147,7 @@ impl<T> Array<T> {
         }
     }
 
-    // TODO: IntoIter + Drain + Handling ZST
+    // TODO: get + set + IntoIter + Drain + Handling ZST
 
     fn grow(&mut self) {
         let (new_cap, new_layout) = if self.cap == 0 {
@@ -180,7 +206,7 @@ impl<T: Eq> Array<T> {
     // The first would be to use transposition, every time an element is 
     // searched and found, we move this element closer to the first index,
     // this way frequently searched element will be faster and faster, 
-    // The second one is **move to fron/headt**, the idea is the same as before
+    // The second one is **move to front/head**, the idea is the same as before
     // but we always swap with the element at index 0.
     // For both solutions, we try to move the element frequently searched 
     // element to the first index, to get a constant time look up.
@@ -213,6 +239,38 @@ impl<T: Eq + Ord> Array<T> {
             }
         }
         None
+    }
+
+    pub fn push_sorted(&mut self, item: T) {
+        // We start by considering that the new value is greater than every
+        // other, so it will be added at the end.
+        let mut insert_idx = self.len;
+        // We find the right index if there is greater values in the array
+        for (idx, _) in self.iter().enumerate() {
+            if item < self[idx] {
+                // Once we found a greater element, we take his index,
+                // it will be shifted to the left.
+                insert_idx = idx;
+                break;
+            }
+        }
+
+        // We insert at the defined index, all the element on the left will be 
+        // shifted.
+        self.insert(insert_idx, item);
+    }
+
+    pub fn is_sorted(&self) -> bool {
+        for (idx, val) in self.iter().enumerate() {
+            if idx + 1 >= self.len {
+                break;
+            }
+
+            if val > self.get(idx + 1) {
+                return false;
+            }
+        }
+        true
     }
 }
 
@@ -286,6 +344,30 @@ mod test {
         arr.grow();
         assert_eq!(4, arr.cap);
         assert_eq!(0, arr.len);
+    }
+
+    #[test]
+    fn array_get() {
+        let mut arr = Array::<i32>::new();
+        arr.push(1);
+        arr.push(3);
+        arr.push(7);
+        assert_eq!(&7, arr.get(2));
+        assert_eq!(&1, arr.get(0));
+        assert_eq!(&7, arr.get(2));
+    }
+
+    #[test]
+    fn array_set() {
+        let mut arr = Array::<i32>::new();
+        arr.push(1);
+        arr.push(3);
+        arr.push(7);
+        arr.set(0, 9);
+        assert_eq!(&9, arr.get(0));
+        assert_eq!(&7, arr.get(2));
+        arr.set(2, 11);
+        assert_eq!(&11, arr.get(2));
     }
 
     #[test]
@@ -410,4 +492,39 @@ mod test {
         assert_eq!(Some(6), arr.binary_search(&12));
         assert_eq!(None, arr.binary_search(&13))
     }
+
+    #[test]
+    fn array_push_sorted() {
+        let mut arr = Array::<i32>::new();
+        arr.push_sorted(1);
+        arr.push_sorted(3);
+        arr.push_sorted(5);
+        arr.push_sorted(7);
+        arr.push_sorted(9);
+        arr.push_sorted(11);
+        arr.push_sorted(12);
+        assert_eq!(&7, arr.get(3));
+        assert_eq!(&11, arr.get(5));
+        arr.push_sorted(6);
+        assert_eq!(&6, arr.get(3));
+        assert_eq!(&7, arr.get(4));
+        assert_eq!(&11, arr.get(6));
+        arr.push_sorted(13);
+        assert_eq!(&13, arr.get(arr.len - 1));
+    }
+
+    #[test]
+    fn array_is_sorted() {
+        let mut arr = Array::<i32>::new();
+        arr.push(1);
+        arr.push(3);
+        arr.push(7);
+        assert!(arr.is_sorted());
+        let mut unsorted_arr = Array::<i32>::new();
+        unsorted_arr.push(1);
+        unsorted_arr.push(7);
+        unsorted_arr.push(3);
+        assert!(!unsorted_arr.is_sorted());
+    }
+
 }
