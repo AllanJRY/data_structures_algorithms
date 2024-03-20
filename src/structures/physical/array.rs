@@ -16,6 +16,8 @@ pub struct Array<T> {
     len: usize,
 }
 
+// TODO: add documentation on attributes and fn, remember to add time complexity
+// (with best case and worst case if necessary)
 impl<T> Array<T> {
     pub fn new() -> Self {
         // Zero sized type are not yet supported, the main challenge here is

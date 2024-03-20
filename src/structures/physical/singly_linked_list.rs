@@ -6,14 +6,16 @@ pub struct SinglyLinkedList<T> {
     head: Option<Box<Node<T>>>,
 }
 
-// TODO: implement IntoIter, Iter, IterMut
+// TODO: implement IntoIter, Iter, IterMut, SortedLinkedList, remove duplicate
+// (with better one in sorted), reverse, use a trait to implements those behaviours
+// on a Doubly, Sorted and Singly linked lists (ADT Abstract Data Type)
 impl<T> SinglyLinkedList<T> {
     pub fn empty() -> Self {
         Self { head: None }
     }
 
     pub fn push(&mut self, val: T) {
-        // the methode take is an "alias" for std::mem::replace(&mut self.head, None)
+        // the method "take" is an "alias" for std::mem::replace(&mut self.head, None)
         let prev_head = self.head.take();
         let new_head = Node {
             val,
