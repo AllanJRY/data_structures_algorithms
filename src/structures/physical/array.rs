@@ -1,13 +1,14 @@
 #![allow(dead_code)]
 
+use std::cmp::Ordering;
 use std::{
     alloc,
     io::Write,
     isize, mem,
     ops::{Deref, DerefMut},
-    ptr::NonNull, process::id,
+    process::id,
+    ptr::NonNull,
 };
-use std::cmp::Ordering;
 
 pub struct Array<T> {
     ptr: NonNull<T>,
@@ -31,10 +32,10 @@ impl<T> Array<T> {
     pub fn get(&self, idx: usize) -> &T {
         assert!(idx < self.len, "index out of bound");
         unsafe {
-            // SAFETY: We are sure that the pointer is not null or it is 
+            // SAFETY: We are sure that the pointer is not null or it is
             // pointing to an invalid address, because we use an assertion
             // on the idx value at the beginning of the fn.
-            return &self.ptr.as_ptr().add(idx).as_ref().unwrap();   
+            return self.ptr.as_ptr().add(idx).as_ref().unwrap();
         }
         // To avoid unsafe, and because we impl Deref en it returns a slice of
         // the array, we can use the brackets syntax, Slices implements Index.
@@ -44,10 +45,10 @@ impl<T> Array<T> {
     pub fn set(&mut self, idx: usize, item: T) {
         assert!(idx < self.len, "index out of bound");
         unsafe {
-            // SAFETY: We are sure that the pointer is not null or it is 
+            // SAFETY: We are sure that the pointer is not null or it is
             // pointing to an invalid address, because we use an assertion
             // on the idx value at the beginning of the fn.
-            self.ptr.as_ptr().add(idx).write(item);   
+            self.ptr.as_ptr().add(idx).write(item);
         }
         // To avoid unsafe, and because we impl Deref en it returns a slice of
         // the array, we can use the brackets syntax, Slices implements Index.
@@ -125,7 +126,7 @@ impl<T> Array<T> {
 
     pub fn remove(&mut self, index: usize) -> T {
         // We need to check if the index is in the bounds, to avoid writing at
-        // an address that we don't owned. Note that here, it is not valid to 
+        // an address that we don't owned. Note that here, it is not valid to
         // remove after everything compared to insert.
         assert!(index < self.len, "index out of bounds");
         unsafe {
@@ -181,7 +182,7 @@ impl<T> Array<T> {
             // IMPORTANTE NOTE: It is important to give the new layout
             // size to the size arg, because a bug may occure when the program
             // sometimes access an invalid memory address (on not owned) when
-            // self.cap is used. The layout size is calculated with size and 
+            // self.cap is used. The layout size is calculated with size and
             // alignement took into account. Note to me: when allocating manually
             // always use layout infos.
             unsafe { alloc::realloc(old_ptr, old_layout, new_layout.size()) as *mut T }
@@ -202,13 +203,13 @@ impl<T> Array<T> {
 
 impl<T: Eq> Array<T> {
     // add to doc :
-    // We can improve linear search in 2 ways : 
-    // The first would be to use transposition, every time an element is 
+    // We can improve linear search in 2 ways :
+    // The first would be to use transposition, every time an element is
     // searched and found, we move this element closer to the first index,
-    // this way frequently searched element will be faster and faster, 
+    // this way frequently searched element will be faster and faster,
     // The second one is **move to front/head**, the idea is the same as before
     // but we always swap with the element at index 0.
-    // For both solutions, we try to move the element frequently searched 
+    // For both solutions, we try to move the element frequently searched
     // element to the first index, to get a constant time look up.
     pub fn linear_search(&self, other: &T) -> Option<usize> {
         for (idx, v) in self.iter().enumerate() {
@@ -255,7 +256,7 @@ impl<T: Eq + Ord> Array<T> {
             }
         }
 
-        // We insert at the defined index, all the element on the left will be 
+        // We insert at the defined index, all the element on the left will be
         // shifted.
         self.insert(insert_idx, item);
     }
@@ -526,5 +527,4 @@ mod test {
         unsorted_arr.push(3);
         assert!(!unsorted_arr.is_sorted());
     }
-
 }
