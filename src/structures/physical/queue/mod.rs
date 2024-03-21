@@ -6,6 +6,10 @@
 
 use std::fmt::Display;
 
+pub use array_queue::ArrayQueue;
+
+mod array_queue;
+
 /// TODO doc + FIFO
 pub trait Queue {
     type Item;
