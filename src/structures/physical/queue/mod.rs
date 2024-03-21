@@ -26,7 +26,7 @@ pub trait Queue {
 #[derive(Debug, PartialEq, Eq)]
 pub enum QueueErr {
     ZeroCapacityNotAllowed,
-    StackOverflow,
+    QueueOverflow,
 }
 
 impl std::error::Error for QueueErr {}
@@ -34,7 +34,7 @@ impl std::error::Error for QueueErr {}
 impl Display for QueueErr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            QueueErr::StackOverflow => write!(
+            QueueErr::QueueOverflow => write!(
                 f,
                 "Unable to insert a new value in the stack, limit reached"
             ),
