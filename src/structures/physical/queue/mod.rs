@@ -1,14 +1,14 @@
 #![allow(dead_code)]
 // TODO : implementations :
-//  - ArrayQueue, which use an array as inner data structure.
-//  - LinkedQueue, which use a linked list as inner data structure.
 //  - UnsafeQueue, use heap allocated array managed directly by pointers
 
 use std::fmt::Display;
 
 pub use array_queue::ArrayQueue;
+pub use linked_queue::LinkedQueue;
 
 mod array_queue;
+mod linked_queue;
 
 /// TODO doc + FIFO
 pub trait Queue {
