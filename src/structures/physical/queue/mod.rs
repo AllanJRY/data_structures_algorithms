@@ -36,10 +36,10 @@ impl Display for QueueErr {
         match self {
             QueueErr::QueueOverflow => write!(
                 f,
-                "Unable to insert a new value in the stack, limit reached"
+                "Unable to insert a new value in the queue, limit reached"
             ),
             QueueErr::ZeroCapacityNotAllowed => {
-                write!(f, "Unable to initialize a stack with no capacity")
+                write!(f, "Unable to initialize a queue with no capacity")
             }
         }
     }
