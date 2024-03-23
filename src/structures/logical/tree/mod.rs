@@ -1,3 +1,3 @@
-pub use binary_tree::BinaryTree;
+pub use binary_tree::LinkedBinaryTree;
 
 mod binary_tree;
